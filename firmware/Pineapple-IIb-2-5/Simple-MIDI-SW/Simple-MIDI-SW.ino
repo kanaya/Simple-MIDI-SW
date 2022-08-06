@@ -1,49 +1,83 @@
 #include <MIDI.h>
 
+const int LED0 = LED_BUILTIN;
+const int LED1 = 11;
+const int RLY  = 4;
+
 MIDI_CREATE_DEFAULT_INSTANCE();
 
-// -----------------------------------------------------------------------------
+void hello() {
+  for (int i = 0; i < 3; ++i) {
+    delay(100);
+    digitalWrite(LED0, HIGH);
+    delay(100);
+    digitalWrite(LED0, LOW);
+  }
+}
 
-// This example shows the old way of checking for input messages.
-// It's simpler to use the callbacks now, check out the dedicated example.
+void turn_on() {
+  digitalWrite(LED0, HIGH);
+  digitalWrite(RLY, HIGH);  
+}
 
-#define LED 13                   // LED pin on Arduino Uno
+void turn_off() {
+    digitalWrite(LED0, LOW);
+    digitalWrite(RLY, LOW);
+}
 
-// -----------------------------------------------------------------------------
-
-void BlinkLed(byte num)         // Basic blink function
-{
-    for (byte i=0;i<num;i++)
-    {
-        digitalWrite(LED,HIGH);
-        delay(50);
-        digitalWrite(LED,LOW);
-        delay(50);
-    }
+void ignore_signal() {
+  digitalWrite(LED1, HIGH);
+  delay(50);
+  digitalWrite(LED1, LOW);
 }
 
 // -----------------------------------------------------------------------------
 
-void setup()
-{
-    pinMode(LED, OUTPUT);
-    MIDI.begin();           // Launch MIDI, by default listening to channel 1.
+// This function will be automatically called when a NoteOn is received.
+// It must be a void-returning function with the correct parameters,
+// see documentation here:
+// https://github.com/FortySevenEffects/arduino_midi_library/wiki/Using-Callbacks
+
+void handleNoteOn(byte channel, byte pitch, byte velocity) {
+  if (pitch == 60) {
+    if (velocity > 0) {
+      turn_on();
+    }
+    else {
+      turn_off();
+    }
+  }
+  else {
+    ignore_signal();
+  }
 }
 
-void loop()
-{
-    if (MIDI.read())                // Is there a MIDI message incoming ?
-    {
-        switch(MIDI.getType())      // Get the type of the message we caught
-        {
-            case midi::ProgramChange:       // If it is a Program Change,
-                BlinkLed(MIDI.getData1());  // blink the LED a number of times
-                                            // correponding to the program number
-                                            // (0 to 127, it can last a while..)
-                break;
-            // See the online reference for other message types
-            default:
-                break;
-        }
-    }
+void handleNoteOff(byte channel, byte pitch, byte velocity) {
+  if (pitch == 60) {
+    turn_off();
+  }
+}
+
+// -----------------------------------------------------------------------------
+
+void setup() {
+  pinMode(LED0, OUTPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(RLY, OUTPUT);
+  hello();
+  
+  // Connect the handleNoteOn function to the library,
+  // so it is called upon reception of a NoteOn.
+  MIDI.setHandleNoteOn(handleNoteOn);  // Put only the name of the function
+
+  // Do the same for NoteOffs
+  MIDI.setHandleNoteOff(handleNoteOff);
+
+  // Initiate MIDI communications, listen to ch 1
+  MIDI.begin(1);
+}
+
+void loop() {
+  // Call MIDI.read the fastest you can for real-time performance.
+  MIDI.read();
 }
