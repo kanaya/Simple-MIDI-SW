@@ -48,7 +48,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity) {
     }
   }
   else {
-    ignore_signal();
+    // ignore_signal();
   }
 }
 
